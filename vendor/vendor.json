@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "6I9mImOHbYFvZm9pdOsQVO6yEcI=",
+			"path": "github.com/kelseyhightower/envconfig",
+			"revision": "9aca109c9aec4633fced9717c4a09ecab3d33111",
+			"revisionTime": "2016-10-19T16:24:55Z"
+		}
+	],
+	"rootPath": "github.com/ef-ctx/hipache-healthcheck-proxy"
+}
