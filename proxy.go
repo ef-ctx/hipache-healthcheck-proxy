@@ -46,7 +46,7 @@ func main() {
 	}
 	client := http.Client{
 		Transport: &http.Transport{
-			Dial: (&net.Dialer{Timeout: time.Second}).Dial,
+			DialContext: (&net.Dialer{Timeout: time.Second}).DialContext,
 		},
 		Timeout: 2 * time.Second,
 	}
