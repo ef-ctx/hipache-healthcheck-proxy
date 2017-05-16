@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/sirupsen/logrus"
 )
 
 const version = "0.1.2"
@@ -29,6 +30,14 @@ func init() {
 type config struct {
 	BindAddress    string `envconfig:"BIND_ADDRESS" default:":9000"`
 	HipacheAddress string `envconfig:"HIPACHE_ADDRESS" required:"true"`
+	LogLevel       string `envconfig:"LOG_LEVEL" default:"debug"`
+}
+
+func (c config) logLevel() logrus.Level {
+	if level, err := logrus.ParseLevel(c.LogLevel); err == nil {
+		return level
+	}
+	return logrus.DebugLevel
 }
 
 func main() {
@@ -41,8 +50,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	logger := logrus.New()
+	logger.Level = c.logLevel()
 	if _, err = url.Parse(c.HipacheAddress); err != nil {
-		log.Fatalf("failed to parse hipache address: %s", err)
+		logger.WithError(err).Fatal("failed to parse hipache address")
 	}
 	client := http.Client{
 		Transport: &http.Transport{
@@ -51,25 +62,35 @@ func main() {
 		Timeout: 2 * time.Second,
 	}
 
-	log.Printf("starting on %s...", c.BindAddress)
+	logger.Debugf("starting on %s...", c.BindAddress)
 	err = http.ListenAndServe(c.BindAddress, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		req, err := http.NewRequest("GET", c.HipacheAddress, nil)
 		if err != nil {
+			logger.WithError(err).Error("failed to create request")
 			http.Error(w, "failed to process request", http.StatusInternalServerError)
 			return
 		}
 		req.Host = "__ping__"
 		resp, err := client.Do(req)
 		if err != nil {
+			logger.WithError(err).Error("failed to send request to hipache")
 			http.Error(w, err.Error(), http.StatusServiceUnavailable)
 			return
 		}
 		defer resp.Body.Close()
+		headers := make(map[string]string)
 		for h := range resp.Header {
 			w.Header().Set(h, resp.Header.Get(h))
+			headers[h] = resp.Header.Get(h)
 		}
 		w.WriteHeader(resp.StatusCode)
 		io.Copy(w, resp.Body)
+		logger.WithFields(logrus.Fields{
+			"statusCode":   resp.StatusCode,
+			"ellapsedTime": time.Since(start).String(),
+			"headers":      headers,
+		}).Debug("healthcheck completed")
 	}))
 	if err != nil {
 		log.Fatal(err)
