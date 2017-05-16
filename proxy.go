@@ -18,7 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const version = "0.1.2"
+const version = "0.1.3"
 
 var printVersion bool
 
